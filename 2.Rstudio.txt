@@ -1,0 +1,39 @@
+### Running a Rstudio client on AWS ###
+
+- Objective : run R client from an EC2.
+
+- Notable specs :
+  - Linux AMI
+  - 1 Availability Zone
+  - 1 User Data script
+
+- Steps : 
+  - 1/ Setup an instance
+    - Linux AMI ;
+    - t2.micro instance type ;
+    - Configure EC2 User Data script :
+
+	#!/bin/bash
+	#install R
+  	yum install -y R
+
+	#install RStudio-Server 1.0.153 (2017-07-20)
+	wget https://download2.rstudio.org/rstudio-server-rhel-1.0.153-x86_64.rpm
+	yum install -y --nogpgcheck rstudio-server-rhel-1.0.153-x86_64.rpm
+	rm rstudio-server-rhel-1.0.153-x86_64.rpm
+
+	#add user(s)
+	useradd username
+	echo username:password | sudo chpasswd
+
+
+  - 2/ Configure Security Group opening :
+  
+ 	TCP : 22 = Anywhere	- SSH port
+	TCP : 8787 = Aywhere	- Rstudio port
+
+  - 3/ Login to : Instance-Public-IP:Rstudio Port = XXX.XXX.XXX.XXX:8787
+
+- Sources : 
+	- https://aws.amazon.com/fr/blogs/big-data/running-r-on-aws/
+

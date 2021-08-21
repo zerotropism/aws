@@ -1,0 +1,41 @@
+### Setup a Bastion-centred structure ###
+
+- Objective : ping www.google.com from Private instance with no public IP.
+
+- Notable specs :
+  - Linux AMI
+  - 1 Availability Zone
+  - 2 Security Groups
+  - 3 Instances
+  - VPC :
+    - 1 Public subnet hosting :
+      - 1 NAT instance
+      - 1 Bastion instance with public IP address
+    - 1 Private subnet hosting : 
+      - 1 Private instance with no public IP address
+
+- Steps :
+  - 1/ Setup VPC with public & private subnets and NAT instance
+  - 2/ Public subnet associated with NOT Main root table with target the unlimited Internet Gateway ID
+  - 3/ Private subnet associated with Main root table with target the NAT instance ID
+  - 4/ All-in Security Group associated with public subnet
+  - 5/ Private Security Group associated with private subnet with source limited to all-in Security Group ID
+  - 6/ Setup Bastion instance inside the Public subnet with enabled public IP
+  - 7/ Setup Private instance inside the Private subnet with disabled public IP
+  - 8/ Through Linux CLI :
+    - Acquire & crypt public key :          > local$ chmod 400 {~/{path}/key.pem}
+    - Upload public key to Bastion folder : > local$ scp -i ~/{path}/public_key.pem key_name.pem ec2-user@{Bastion_public_IP}:/home/ec2-user
+    - Connect to Bastion public IP :        > local$ ssh -i ~/{path}/public_key.pem ec2-user@{Bastion_public_IP}
+    - Connect to Private private IP :       > Bastion$ ssh -i ~/{path}/public_key.pem ec2-user@{Private_private_IP}
+    - Ping google from private instance :   > Private$ ping www.google.com
+
+- Note : Setup NAT instance root table rule source to all-in Security Group ID including ping protocole
+
+- Sources :
+  - https://serverfault.com/questions/516431/create-an-ssh-tunnel-with-authentication-keys-syntax
+  - https://forums.aws.amazon.com/thread.jspa?threadID=78175
+  - https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_NAT_Instance.html#NATSG
+  - https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_SecurityGroups.html
+  - https://florianbrinkmann.com/en/3436/ssh-key-and-the-windows-subsystem-for-linux/
+  - https://forums.aws.amazon.com/message.jspa?messageID=389929
+  - https://www.youtube.com/watch?v=EpFAHis4O4g

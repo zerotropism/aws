@@ -1,0 +1,98 @@
+### Running Load Balancer under high availability ###
+
+- Objective : run a load balancer offsetting 2 web servers.
+
+- Notable specs :
+  - Linux AMI
+  - 2 Availability Zones
+  - 2 NAT Gateways
+  - 2 Security Groups
+  - 2 Instances
+  - 4 Route Tables
+  - 1 Load Balancer
+  - VPC :
+    - In 1st Availability Zone 
+      - 1 Public subnet
+      - 1 Private subnet hosting 1 Web Server
+    - In 2nd Availability Zone
+      - 1 Public subnet
+      - 1 Private subnet hosting 1 Web Server
+
+- Steps :
+
+ - i/ Setting up the parts of the system, from Services > VPC :
+  - 1/ Create 2 Elastic IPs for NAT Gateways
+  - 2/ Create 1 NAT Gateway you will associate with 1 Elastic IP you just created
+  - 3/ Setup VPC though VPC Wizard with :
+    - Public subnet in Availability Zone 1
+    - Private subnet in identical Availability Zone
+    - NAT Gateway you will associate withe the 2nd Elastic IP you created in step 1
+  - 4/ Setup 2 additional subnets :
+    - Public subnet in Availability Zone 2
+    - Private subnet in same Availability Zone
+
+ - ii/ Wiring the parts of the system, still from Services > VPC
+  - 5/ Setup the 2 already existing Route Tables as :
+    - For the one which is not marked as 'Main', you will associate it to the 1st Public subnet as :
+      - In the 'Routes' tab, input the Internet Gateway ID
+      - In the 'Subnet Associations' tab select the Public subnet 1 ID of your VPC setup
+    - For the 2nd one you will associate it to the 1st Private subnet as :
+      - In the 'Routes' tab input one of the NAT Gateways ID of your setup
+      - In the 'Subnet Associations' tab select the Private subnet 1 ID of your VPC setup
+  - 6/ Create two additional Route Tables you will setup as :
+    - For the 1st one you will associate it to the 2nd Public subnet as :
+      - In the 'Routes' tab, input the Internet Gateway ID
+      - In the 'Subnet Associations' tab select the Public subnet 2 ID of your VPC setup
+    - For the 2nd one you will associate it to the 2nd Private subnet as :
+      - In the 'Routes' tab input the 2nd NAT Gateways ID of your setup
+      - In the 'Subnet Associations' tab select the Private subnet 2 ID of your VPC setup
+  - 7/ Create a Security Group set up as :
+    - Inbound rules allowing HTTP (80), HTTPS (443) and SSH (22) from anywhere
+    - Outbound rule allowing all-in protocole
+
+ - iii/ Filling the parts, from Services > EC2
+  - 8/ Create an EC2, linux based, t2.micro equipped instance as :
+    - Within your Private subnet 1 (thus belongging to the 1st Availability Zone of your setup)
+    - Precising under Data User the following script :
+
+	#!/bin/bash
+	sudo yum update -y
+	sudo yum -y install httpd
+	sudo service httpd start
+	sudo bash -c 'echo Annoying > /var/www/html/index.html'
+
+Adjusting the string chain between 'echo' and '>' as it will consist the 1st part of your message
+This is your 1st Web Server
+    - Associate the instance to the Security Group you created in step 7
+  - 9/ Create another EC2, linux based, t2.micro equipped instance as :
+    - Within your Private subnet 2 (thus belongging to the 2nd Availability Zone of your setup)
+    - Precising under Data User the following script :
+
+	#!/bin/bash
+	sudo yum update -y
+	sudo yum -y install httpd
+	sudo service httpd start
+	sudo bash -c 'echo Vagueness > /var/www/html/index.html'
+
+Adjusting the string chain between 'echo' and '>' as it will consist the 2nd part of your message
+This is your 2nd Web Server
+    - Associate the instance to the same Security Group you created in step 7
+ 
+ - iv/ Switch the engine ON, from Services > EC2
+  - 10/ Create an Appliation HTTP/HTTPS Load Balancer by :
+    - Selecting your VPC created in step 3
+    - Selecting the 2 Public subnets of both Availability Zones
+    - Selecting Security Group created in step 7
+    - Selecting the 2 Private subnets and ADD TO REGISTER
+
+ - v/ Flying the system
+  - 11/ Once active :
+    - Input the DNS address of your newly created Load Balancer in your browser
+    - You should see your first message, refresh the page
+    - You should see your second message.
+    - You are done.
+
+- Source :
+https://aws.amazon.com/fr/premiumsupport/knowledge-center/public-load-balancer-private-ec2/
+https://stackoverflow.com/questions/42264931/aws-elb-availability-zones-vpc-best-practices
+Labs 2, 6 and 8 of the AWS Training & Certification
